@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+    <Compile Remove="XRServer_scene_api_update\**" />
+    <EmbeddedResource Remove="XRServer_scene_api_update\**" />
+    <None Remove="XRServer_scene_api_update\**" />
+    </ItemGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="AssimpNet" Version="4.1.0" />
+        <PackageReference Include="SharpGLTF.Core" Version="1.0.0" />
+    </ItemGroup>
+    <ItemGroup>
+      <Reference Include="CADImport">
+        <HintPath>..\..\CAD .NET 16\bin\CADImport.dll</HintPath>
+      </Reference>
+      <Reference Include="DWGtoPDF">
+        <HintPath>..\DWGtoPDF\bin\Release\net8.0-windows\DWGtoPDF.dll</HintPath>
+      </Reference>
+      <Reference Include="PointCloudConverter">
+        <HintPath>libs\PointCloudConverter.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+</Project>

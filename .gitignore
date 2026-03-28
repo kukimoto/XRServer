@@ -1,0 +1,39 @@
+# =========================
+# XRServer / Visual Studio / .NET
+# =========================
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# NuGet / packages
+packages/
+*.nupkg
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+
+# Backup / patch / diff
+*.bak
+*.diff
+*.patch
+*コピー*
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
