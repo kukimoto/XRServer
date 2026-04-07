@@ -34,6 +34,7 @@
             Setting = new Button();
             label1 = new Label();
             Clear = new Button();
+            AddUser = new Button();
             SuspendLayout();
             // 
             // Console
@@ -69,6 +70,7 @@
             // 
             // Setting
             // 
+            Setting.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             Setting.Location = new Point(508, 415);
             Setting.Name = "Setting";
             Setting.Size = new Size(75, 23);
@@ -98,11 +100,23 @@
             Clear.UseVisualStyleBackColor = true;
             Clear.Click += Clear_Click;
             // 
+            // AddUser
+            // 
+            AddUser.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            AddUser.Location = new Point(407, 416);
+            AddUser.Name = "AddUser";
+            AddUser.Size = new Size(75, 23);
+            AddUser.TabIndex = 6;
+            AddUser.Text = "Add User";
+            AddUser.UseVisualStyleBackColor = true;
+            AddUser.Click += AddUser_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(AddUser);
             Controls.Add(Clear);
             Controls.Add(label1);
             Controls.Add(Setting);
@@ -123,5 +137,6 @@
         private Button Setting;
         private Label label1;
         private Button Clear;
+        private Button AddUser;
     }
 }

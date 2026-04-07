@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using DWGtoPDF;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using PointCloudConvert;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,8 +22,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using PointCloudConvert;
-using DWGtoPDF;
+using XRServer.Licensing;
+using System.Drawing;
 
 namespace XRServer
 {
@@ -36,9 +38,69 @@ namespace XRServer
 
         private const string SettingsFolderName = "setting";
 
+        private LicenseValidationResult? _licenseResult;
+        private UserAccountService? _userService;
+        private DataGridView? _usersGrid;
+
         public Form1()
         {
             InitializeComponent();
+            BuildUsersGrid();
+
+            //string licensePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.lic");
+            //LicenseValidationResult result = LicenseLoaderWin.LoadAndValidate(licensePath);
+            string licensePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.lic");
+
+            _licenseResult = LicenseLoaderWin.LoadAndValidate(licensePath);
+
+            // デバッグ用なら残してもよいが、普段は消した方がよい
+            // MessageBox.Show("licensePath = " + licensePath);
+
+            if (!_licenseResult.IsValid)
+            {
+                using (var dlg = new LicenseErrorDialog(
+                    _licenseResult.ErrorMessage + Environment.NewLine + Environment.NewLine +
+                    "下記 Device ID をライセンス発行側に伝えてください。",
+                    _licenseResult.CurrentDeviceId))
+                {
+                    dlg.ShowDialog();
+                }
+            }
+            else
+            {
+                AppendConsole(
+                    $"ライセンス認証成功{Environment.NewLine}" +
+                    $"Name: {_licenseResult.License.name}{Environment.NewLine}" +
+                    $"Expire: {_licenseResult.License.expireDate}{Environment.NewLine}" +
+                    $"Users: {_licenseResult.License.userAmmount}");
+            }
+
+            MessageBox.Show("licensePath = " + licensePath);
+            EnsureUserService();
+            ReloadUsersGrid();
+
+            /*
+            if (!result.IsValid)
+            {
+                MessageBox.Show(result.ErrorMessage);
+            }
+
+            if (!result.IsValid)
+            {
+                using (var dlg = new LicenseErrorDialog(
+                    result.ErrorMessage + Environment.NewLine + Environment.NewLine +
+                    "下記 Device ID をライセンス発行側に伝えてください。",
+                    result.CurrentDeviceId))
+                {
+                    dlg.ShowDialog();
+                }
+            }
+            else
+            {
+                //AppendConsole($"MaxDepth: {opt.MaxDepth}");
+                AppendConsole($"ライセンス認証成功  {Environment.NewLine} Name:{result.License.name + Environment.NewLine} Expire: {result.License.expireDate}");
+            }
+            */
 
             // UIꍇɂLi݊j
             // - Button  Name: btnSelectStorage
@@ -768,7 +830,7 @@ namespace XRServer
             });
 
 
-           // RegisterXlsxViewerRoutes(_app);
+            // RegisterXlsxViewerRoutes(_app);
 
             _app.MapGet("/api/list", () =>
             {
@@ -1105,6 +1167,176 @@ namespace XRServer
             //var result = PointCloudConverter.ConvertFile(savedPath, projectDir);
 
             AppendConsole("point cloud converter test ");
+        }
+        private void AddUser_Click(object sender, EventArgs e)
+        {
+            if (_licenseResult == null || !_licenseResult.IsValid)
+            {
+                MessageBox.Show("ライセンスが有効ではありません。", "Error");
+                return;
+            }
+
+            EnsureUserService();
+            if (_userService == null)
+            {
+                MessageBox.Show("ユーザDBを初期化できませんでした。", "Error");
+                return;
+            }
+
+            using (var dlg = new AddUserForm())
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                int maxUsers = _licenseResult.License.userAmmount;
+
+                var result = _userService.CreateUser(
+                    dlg.UserNameValue,
+                    dlg.PasswordValue,
+                    dlg.RoleValue,
+                    maxUsers);
+
+                MessageBox.Show(result.Message, result.Ok ? "OK" : "Error");
+                ReloadUsersGrid();
+            }
+        }
+
+        private string GetAuthDbPath()
+        {
+            return Path.Combine(_config.StorageDir, "auth.db");
+        }
+
+        private void EnsureUserService()
+        {
+            if (_userService != null)
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(_config.StorageDir);
+
+            _userService = new UserAccountService(GetAuthDbPath());
+            _userService.Initialize();
+        }
+
+        private void BuildUsersGrid()
+        {
+            // 既存 Console を左半分に寄せる
+            Console.SetBounds(22, 43, 360, 360);
+
+            _usersGrid = new DataGridView
+            {
+                Name = "UsersGrid",
+                Left = 407,
+                Top = 43,
+                Width = 381,
+                Height = 360,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                MultiSelect = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoGenerateColumns = false
+            };
+
+            _usersGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colId",
+                HeaderText = "ID",
+                DataPropertyName = "Id",
+                Visible = false
+            });
+
+            _usersGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colUsername",
+                HeaderText = "Username",
+                DataPropertyName = "Username",
+                Width = 160
+            });
+
+            _usersGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colRole",
+                HeaderText = "Role",
+                DataPropertyName = "Role",
+                Width = 90
+            });
+
+            _usersGrid.Columns.Add(new DataGridViewButtonColumn
+            {
+                Name = "colDelete",
+                HeaderText = "",
+                Text = "ユーザ削除",
+                UseColumnTextForButtonValue = true,
+                Width = 90
+            });
+
+            _usersGrid.CellContentClick += UsersGrid_CellContentClick;
+
+            Controls.Add(_usersGrid);
+            _usersGrid.BringToFront();
+        }
+
+        private void ReloadUsersGrid()
+        {
+            if (_usersGrid == null)
+            {
+                return;
+            }
+
+            EnsureUserService();
+            if (_userService == null)
+            {
+                return;
+            }
+
+            var rows = _userService.GetUsers();
+            _usersGrid.DataSource = null;
+            _usersGrid.DataSource = rows;
+        }
+
+        private void UsersGrid_CellContentClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (_usersGrid == null || _userService == null)
+            {
+                return;
+            }
+
+            if (e.RowIndex < 0)
+            {
+                return;
+            }
+
+            if (_usersGrid.Columns[e.ColumnIndex].Name != "colDelete")
+            {
+                return;
+            }
+
+            var row = _usersGrid.Rows[e.RowIndex];
+
+            long userId = Convert.ToInt64(row.Cells["colId"].Value);
+            string username = Convert.ToString(row.Cells["colUsername"].Value) ?? "";
+
+            var confirm = MessageBox.Show(
+                $"ユーザ '{username}' を削除しますか？",
+                "確認",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            var result = _userService.DeleteUser(userId);
+            MessageBox.Show(result.Message, result.Ok ? "OK" : "Error");
+
+            ReloadUsersGrid();
         }
     }
 
